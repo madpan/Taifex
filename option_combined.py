@@ -10,7 +10,6 @@ from os import listdir
 from os.path import join
 
 
-
 class TWOptionParser():
     
     def __init__(self, solver):

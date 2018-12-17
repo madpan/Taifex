@@ -8,7 +8,10 @@ import time
 from os import listdir
 from os.path import join
 import captchaSolver
-
+import calendar
+from datetime import datetime, timedelta, date
+from dateutil.relativedelta import relativedelta
+import numpy as np
 
 class TWFutureParser():
     
@@ -283,10 +286,25 @@ os.remove('C:/Users/user/Desktop/taifex-parser-master/twfuture/YAYA.csv')
 date='futures'+Date.loc[1]+'.csv'
 Final_Name = date[0]     
 Revise.to_csv('C:/Users/user/Desktop/taifex-parser-master/futuresData'+'\\'+Final_Name,encoding="cp950",index = False)
-    
+ 
+tradedate = str(Revise['交易日期'][1])
+Year = int(tradedate[0:4])
+Month = int(tradedate[4:6])
+Day = int (tradedate[6:8])
+Settlement = calendar.Calendar(2).monthdatescalendar(Year,Month)[3][0]
+today = tradedate(Year,Month,Day)
+if  (today > Settlement) == True:
+    far = Settlement + relativedelta(months=2)
+    farmonth = int( str(far.year)+str(far.month))
+else:
+    far = Settlement + relativedelta(months=1)
+    farmonth = int( str(far.year)+str(far.month))
+Revise['translate']=((Revise['到期月份'] == farmonth) & (Revise['成交價格'] != np.ceil(Revise['成交價格'])))
+Revise = Revise[Revise['translate'] == False]
+
+   
 important=pd.DataFrame(columns=['日期','期貨商名稱','標的','是否交易','次數','買進','賣出'])
 corp=Revise.groupby('期貨商名稱')
-date=futures['交易日期'].loc[0]
 size=Revise.groupby('契約名稱').size()
 size=pd.DataFrame(size)
 size.columns=['交易次數']
@@ -300,7 +318,7 @@ for i in corp:
     temptn=pd.DataFrame(b)
     temptn.columns=[firm]
     print(firm)
-    print(futures['交易日期'].loc[0])
+    print(tradedate)
     print('\n')          
     size=size.join(temptn)
     firm=size.columns
@@ -310,16 +328,16 @@ for m in target:
         if pd.isnull(size[l][m]) == False:
             BUY=times.loc[l,'買進',m][0] if(l,'買進',m) in times.index else 0
             SELL=times.loc[l,'賣出',m][0] if(l,'賣出',m) in times.index else 0
-            TON=pd.DataFrame({'日期':str(futures['交易日期'].loc[0]),
-                              '期貨商名稱':l,'標的':m,'是否交易':'是',
-                              '次數':size[l][m],'買進':BUY,'賣出':SELL},index=[0])
+            TON=pd.DataFrame({'日期':tradedate,'期貨商名稱':l,'標的':m,
+                              '是否交易':'是','次數':size[l][m],'買進':BUY,
+                              '賣出':SELL},index=[0])
             temptn=pd.DataFrame(TON)
             frames = [important,TON]  
             important=pd.concat(frames)                    
         else:
-            TONO = pd.DataFrame({'日期':str(futures['交易日期'].loc[0]),
-                                 '期貨商名稱':l,'標的':m,'是否交易':'否',
-                                 '次數':'0','買進':'0','賣出':'0'},index=[0])
+            TONO = pd.DataFrame({'日期':tradedate,'期貨商名稱':l,'標的':m,
+                                 '是否交易':'否','次數':'0','買進':'0',
+                                 '賣出':'0'},index=[0])
             temptn=pd.DataFrame(TONO)
             frames = [important,TONO]   
             important=pd.concat(frames)
